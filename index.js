@@ -2,6 +2,8 @@ const express=require('express');
 const mongoose=require('mongoose');
 
 const userRouter=require("./routes/userRoutes");
+const productRouter=require("./routes/productRoutes");
+
 
 const app=express();
 const port= 3001;
@@ -9,7 +11,9 @@ var cors = require('cors');
 
 app.use(cors());
 app.use(express.json());
+
 app.use("/", userRouter);
+app.use("/product", productRouter);
 
 app.get('/',(req,res)=>{
     res.send("hello");
