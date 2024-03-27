@@ -174,6 +174,92 @@ const stateWise=async(req,res)=>{
         console.log(error);
         res.status(500).json({ message: 'Internal server error' });
       }
+};
+const categoryWise=async(req,res)=>{
+    try{
+        const selectedCategory=req.query.category;
+        console.log(selectedCategory);
+
+        const salesData = await orderDetailSchema.aggregate([
+            {
+              $match: { category: selectedCategory }
+            },
+            {
+              $group: {
+                _id: '$sub_category',
+                totalSales: { $sum: '$amount' }
+              }
+            }
+          ]);
+      
+          // If no data found, return 404
+          if (salesData.length === 0) {
+            return res.status(404).json({ message: 'No data found for the selected category' });
+          }
+      
+          // Prepare xAxisBarData and yAxisBarData
+          const xAxisBarData = salesData.map(entry => entry._id);
+          const yAxisBarData = [salesData.map(entry => entry.totalSales)];
+      
+          // Prepare barDataLabels
+          const barDataLabels = ['Sales'];
+      
+          // Return the formatted data
+          res.json({ xAxisBarData, yAxisBarData, barDataLabels });
+
+    }
+    catch(error){
+        console.log(error);
+        res.status(500).json({message:'internal server error'});
+    }
+};
+
+const yearWise= async(req,res)=>{
+    const selectedYear = parseInt(req.query.year); // Convert year to integer
+
+  try {
+    // Aggregate the total sales for each month within the selected year
+    const salesData = await orderDetailSchema.aggregate([
+      {
+        $match: {
+          $expr: { $eq: [{ $year: { $toDate: '$order_date' } }, selectedYear] }
+        }
+      },
+      {
+        $group: {
+          _id: { $month: { $toDate: '$order_date' } },
+          totalSales: { $sum: '$amount' }
+        }
+      },
+      {
+        $sort: { _id: 1 } // Sort by month ascending
+      }
+    ]);
+
+    // If no data found, return 404
+    if (salesData.length === 0) {
+      return res.status(404).json({ message: 'No data found for the selected year' });
+    }
+
+    // Prepare xAxisData and yAxisData
+    const xAxisData = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const yAxisData = [new Array(12).fill(0)]; // Initialize array for sales data for each month
+    salesData.forEach(entry => {
+      yAxisData[0][entry._id - 1] = entry.totalSales; // Map sales data to corresponding month index
+    });
+
+    // Prepare dataLabels
+    const dataLabels = ['Product A'];
+
+    // Return the formatted data
+    res.json({ xAxisData, yAxisData, dataLabels });
+  } catch (error) {
+    // Handle errors
+    res.status(500).json({ message: 'Internal server error' });
+  }
 }
-module.exports={addOrder,getData,lineChart,stateWise};
+module.exports={addOrder,getData,lineChart,stateWise,categoryWise,yearWise};
 
