@@ -7,7 +7,8 @@ const productRouter=express.Router();
 productRouter.post("/addProduct",addProduct);
 productRouter.get("/",getAllData);
 productRouter.delete("/delete/:id",deleteProduct);
-productRouter.get("/:id",getProductbyId)
+productRouter.get("/:id",getProductbyId),
+
 
 //userRouter.post("/",signin);
 

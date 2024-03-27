@@ -26,6 +26,37 @@ const addOrder=async(req,res)=>{
 
 const getData=async(req,res)=>{
     try{
+        const topSellingProduct = await orderDetailSchema.aggregate([
+            {
+              $group: {
+                _id: '$sub_category',
+                totalQuantitySold: { $sum: '$quantity' },
+              },
+            },
+            {
+              $sort: { totalQuantitySold: -1 }
+            },
+            {
+              $limit: 1
+            }
+          ]);
+      
+          // Aggregate the total amount spent by each customer
+          const topCustomer = await orderDetailSchema.aggregate([
+            {
+              $group: {
+                _id: '$customer_name',
+                totalAmountSpent: { $sum: '$amount' },
+              },
+            },
+            {
+              $sort: { totalAmountSpent: -1 }
+            },
+            {
+              $limit: 1
+            }
+          ]);
+
         const totals = await orderDetailSchema.aggregate([
             {
                 $group: {
@@ -43,7 +74,7 @@ const getData=async(req,res)=>{
             { label: 'Total Product', value: `${totals[0].totalProducts}` },
             { label: 'Total Orders', value: `${totals[0].totalOrders}` }
           ];
-        res.status(200).json(formattedStats);
+        res.status(200).json({stats:formattedStats,Top_Product:topSellingProduct[0]._id,Top_Costumer:topCustomer[0]._id});
     }
     catch(err){
         console.log(error);
@@ -114,5 +145,35 @@ const lineChart=async(req,res)=>{
         res.status(500).json({ error: 'Internal server error' });
     }
 };
-module.exports={addOrder,getData,lineChart};
+
+
+const stateWise=async(req,res)=>{
+    try {
+        // Aggregate the total amount spent for each state
+        const stateWiseAggregate = await orderDetailSchema.aggregate([
+          {
+            $group: {
+              _id: '$state',
+              totalAmountSpent: { $sum: '$amount' },
+            },
+          },
+          {
+            $sort: { totalAmountSpent: -1 }
+          }
+        ]);
+    
+        // If no data found, return 404
+        if (stateWiseAggregate.length === 0) {
+          return res.status(404).json({ message: 'No data found' });
+        }
+    
+        // Return the state-wise aggregated data
+        res.json(stateWiseAggregate);
+      } catch (error) {
+        // Handle errors
+        console.log(error);
+        res.status(500).json({ message: 'Internal server error' });
+      }
+}
+module.exports={addOrder,getData,lineChart,stateWise};
 
