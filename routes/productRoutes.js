@@ -9,7 +9,7 @@ const {
 
 const productRouter = express.Router();
 
-productRouter.post("/addProduct", addProduct);
+productRouter.post("/", addProduct);
 productRouter.get("/", getAllData);
 productRouter.delete("/delete/:id", deleteProduct);
 productRouter.get("/:id", getProductbyId),

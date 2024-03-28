@@ -46,7 +46,7 @@ const getAllData = async (req, res) => {
   try {
     const data = await productDetailSchema.find();
     res
-      .status(201)
+      .status(200)
       .json({ data: data, message: "got all the products from Db" });
   } catch (error) {
     res.status(500).json({ message: error.message });

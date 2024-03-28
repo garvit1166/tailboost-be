@@ -21,7 +21,7 @@ const signup = async (req, res) => {
     });
 
     const token = jwt.sign({ email: result.email, id: result._id }, SECRET_KEY);
-    res.status(201).json({ user: result, token: token });
+    res.status(201).json({ user: result, token: token ,message:"Added the User Successfully"});
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Something went wrong" });

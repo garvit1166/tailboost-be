@@ -1,4 +1,21 @@
-const orderDetailSchema = require("../models/orderDetail");
+const orderDetailSchema = require('../models/orderDetail');
+const wss = require('../index.js');
+
+let refreshTimeout;
+
+const sendRefreshMessage = () => {
+  console.log('hi');
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(JSON.stringify({ message: 'refresh' }));
+    }
+  });
+};
+
+const debounceRefreshMessage = () => {
+  clearTimeout(refreshTimeout);
+  refreshTimeout = setTimeout(sendRefreshMessage, 20000);
+};
 
 const addOrder = async (req, res) => {
   try {
@@ -28,14 +45,15 @@ const addOrder = async (req, res) => {
       state: state,
       city: city,
     });
-    console.log("Added Order");
+    debounceRefreshMessage();
+    console.log('Added Order');
     res.status(201).json({
       product: product,
-      message: "Added the Order Details Successfully",
+      message: 'Added the Order Details Successfully',
     });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(500).json({ message: 'Something went wrong' });
   }
 };
 
@@ -44,8 +62,8 @@ const getData = async (req, res) => {
     const topSellingProduct = await orderDetailSchema.aggregate([
       {
         $group: {
-          _id: "$sub_category",
-          totalQuantitySold: { $sum: "$quantity" },
+          _id: '$sub_category',
+          totalQuantitySold: { $sum: '$quantity' },
         },
       },
       {
@@ -55,12 +73,12 @@ const getData = async (req, res) => {
         $limit: 1,
       },
     ]);
-
+    console.log(topSellingProduct);
     const topCustomer = await orderDetailSchema.aggregate([
       {
         $group: {
-          _id: "$customer_name",
-          totalAmountSpent: { $sum: "$amount" },
+          _id: '$customer_name',
+          totalAmountSpent: { $sum: '$amount' },
         },
       },
       {
@@ -70,53 +88,58 @@ const getData = async (req, res) => {
         $limit: 1,
       },
     ]);
-    const uniqueCategories = await orderDetailSchema.distinct("category");
-
+    console.log('topCustomer:', topCustomer);
+    const uniqueCategories = await orderDetailSchema.distinct('category');
+    console.log('uniqueCategories:', uniqueCategories);
     const uniqueYears = await orderDetailSchema.aggregate([
       {
         $group: {
-          _id: { $year: { $toDate: "$order_date" } },
+          _id: { $year: { $toDate: '$order_date' } },
         },
       },
       {
         $sort: { _id: 1 },
       },
     ]);
-
+    console.log('uniqueYears:', uniqueYears);
     const stateWiseAggregate = await orderDetailSchema.aggregate([
       {
         $group: {
-          _id: "$state",
-          totalAmountSpent: { $sum: "$amount" },
+          _id: '$state',
+          totalAmountSpent: { $sum: '$amount' },
         },
       },
       {
         $sort: { totalAmountSpent: -1 },
       },
+      {
+        $limit:10
+      }
     ]);
-
+    console.log('stateWiseAggregate ', stateWiseAggregate);
     const totals = await orderDetailSchema.aggregate([
       {
         $group: {
           _id: null,
           totalOrders: { $sum: 1 },
-          totalRevenue: { $sum: "$amount" },
-          totalProfit: { $sum: "$profit" },
-          totalProducts: { $sum: "$quantity" },
+          totalRevenue: { $sum: '$amount' },
+          totalProfit: { $sum: '$profit' },
+          totalProducts: { $sum: '$quantity' },
         },
       },
     ]);
     const formattedStats = [
-      { label: "Total Revenue", value: `${totals[0].totalRevenue}` },
-      { label: "Total Profit", value: `${totals[0].totalProfit}` },
-      { label: "Total Product", value: `${totals[0].totalProducts}` },
-      { label: "Total Orders", value: `${totals[0].totalOrders}` },
+      { label: 'Total Revenue', value: `${totals[0].totalRevenue}` },
+      { label: 'Total Profit', value: `${totals[0].totalProfit}` },
+      { label: 'Total Product', value: `${totals[0].totalProducts}` },
+      { label: 'Total Orders', value: `${totals[0].totalOrders}` },
     ];
+    console.log('Formatted Stats:', totals);
     const Top_Costumer = [
-      { label: "Top Costumer", value: `${topCustomer[0]._id}` },
+      { label: 'Top Costumer', value: `${topCustomer[0]._id}` },
     ];
     const Top_Product = [
-      { label: "Top Product", value: `${topSellingProduct[0]._id}` },
+      { label: 'Top Product', value: `${topSellingProduct[0]._id}` },
     ];
     res.status(200).json({
       stats: formattedStats,
@@ -128,82 +151,7 @@ const getData = async (req, res) => {
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({ message: "Something went wrong" });
-  }
-};
-
-const lineChart = async (req, res) => {
-  try {
-    const { filter } = req.body;
-    console.log(filter);
-    let matchStage = {};
-
-    switch (filter) {
-      case "daily":
-        matchStage = {
-          $match: {
-            order_date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-          },
-        };
-        break;
-      case "weekly":
-        matchStage = {
-          $match: {
-            order_date: {
-              $gte: new Date(new Date() - 7 * 24 * 60 * 60 * 1000),
-              $lt: new Date(),
-            },
-          },
-        };
-        break;
-      case "monthly":
-        matchStage = {
-          $match: {
-            order_date: {
-              $gte: new Date(
-                new Date().getFullYear(),
-                new Date().getMonth(),
-                1
-              ),
-              $lt: new Date(
-                new Date().getFullYear(),
-                new Date().getMonth() + 1,
-                0
-              ),
-            },
-          },
-        };
-        break;
-      case "yearly":
-        matchStage = {
-          $match: {
-            order_date: {
-              $gte: new Date(new Date().getFullYear(), 0, 1),
-              $lt: new Date(new Date().getFullYear() + 1, 0, 1),
-            },
-          },
-        };
-        break;
-      default:
-        break;
-    }
-
-    const analysis = await orderDetailSchema.aggregate([
-      matchStage,
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: "$amount" },
-          totalProfit: { $sum: "$profit" },
-          totalOrders: { $sum: "$Profit" },
-        },
-      },
-    ]);
-
-    res.json(analysis);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ message: 'Something went wrong' });
   }
 };
 
@@ -218,8 +166,8 @@ const categoryWise = async (req, res) => {
       },
       {
         $group: {
-          _id: "$sub_category",
-          totalSales: { $sum: "$amount" },
+          _id: '$sub_category',
+          totalSales: { $sum: '$amount' },
         },
       },
     ]);
@@ -227,34 +175,34 @@ const categoryWise = async (req, res) => {
     if (salesData.length === 0) {
       return res
         .status(404)
-        .json({ message: "No data found for the selected category" });
+        .json({ message: 'No data found for the selected category' });
     }
 
     const xAxisData = salesData.map((entry) => entry._id);
     const yAxisData = [salesData.map((entry) => entry.totalSales)];
 
-    const dataLabels = ["Sales"];
+    const dataLabels = ['Sales'];
 
     res.json({ xAxisData, yAxisData, dataLabels });
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "internal server error" });
+    res.status(500).json({ message: 'internal server error' });
   }
 };
 
 const yearWise = async (req, res) => {
   const selectedYear = req.query.year;
-
+  console.log(selectedYear);
   try {
     let xAxisData = [];
     let yAxisData = [];
-    let dataLabels = ["Sales"];
-    if (selectedYear == "Yearly") {
+    let dataLabels = ['Sales'];
+    if (selectedYear == 'Yearly') {
       const salesData = await orderDetailSchema.aggregate([
         {
           $group: {
-            _id: { $year: { $toDate: "$order_date" } },
-            totalAmount: { $sum: "$amount" },
+            _id: { $year: { $toDate: '$order_date' } },
+            totalAmount: { $sum: '$amount' },
           },
         },
         {
@@ -263,7 +211,7 @@ const yearWise = async (req, res) => {
       ]);
 
       if (salesData.length === 0) {
-        return res.status(404).json({ message: "No data found" });
+        return res.status(404).json({ message: 'No data found' });
       }
 
       xAxisData = salesData.map((entry) => entry._id);
@@ -274,7 +222,7 @@ const yearWise = async (req, res) => {
           $match: {
             $expr: {
               $eq: [
-                { $year: { $toDate: "$order_date" } },
+                { $year: { $toDate: '$order_date' } },
                 parseInt(selectedYear),
               ],
             },
@@ -282,8 +230,8 @@ const yearWise = async (req, res) => {
         },
         {
           $group: {
-            _id: { $month: { $toDate: "$order_date" } },
-            totalSales: { $sum: "$amount" },
+            _id: { $month: { $toDate: '$order_date' } },
+            totalSales: { $sum: '$amount' },
           },
         },
         {
@@ -294,22 +242,22 @@ const yearWise = async (req, res) => {
       if (salesData.length === 0) {
         return res
           .status(404)
-          .json({ message: "No data found for the selected year" });
+          .json({ message: 'No data found for the selected year' });
       }
 
       xAxisData = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
       ];
       const temp = new Array(12).fill(0);
       salesData.forEach((entry) => {
@@ -322,13 +270,13 @@ const yearWise = async (req, res) => {
 
     res.json({ xAxisData, yAxisData, dataLabels });
   } catch (error) {
-    res.status(500).json({ message: "Internal server error" });
+    console.log(error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 module.exports = {
   addOrder,
   getData,
-  lineChart,
   categoryWise,
   yearWise,
 };
