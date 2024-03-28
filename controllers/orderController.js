@@ -29,12 +29,10 @@ const addOrder = async (req, res) => {
       city: city,
     });
     console.log("Added Order");
-    res
-      .status(201)
-      .json({
-        product: product,
-        message: "Added the Order Details Successfully",
-      });
+    res.status(201).json({
+      product: product,
+      message: "Added the Order Details Successfully",
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Something went wrong" });
@@ -58,7 +56,6 @@ const getData = async (req, res) => {
       },
     ]);
 
-    // Aggregate the total amount spent by each customer
     const topCustomer = await orderDetailSchema.aggregate([
       {
         $group: {
@@ -73,15 +70,18 @@ const getData = async (req, res) => {
         $limit: 1,
       },
     ]);
-    const uniqueCategories = await orderDetailSchema.distinct('category');
+    const uniqueCategories = await orderDetailSchema.distinct("category");
 
     const uniqueYears = await orderDetailSchema.aggregate([
-        {
-          $group: {
-            _id: { $year: { $toDate: '$order_date' } }
-          }
-        }
-      ]);
+      {
+        $group: {
+          _id: { $year: { $toDate: "$order_date" } },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
 
     const stateWiseAggregate = await orderDetailSchema.aggregate([
       {
@@ -112,16 +112,20 @@ const getData = async (req, res) => {
       { label: "Total Product", value: `${totals[0].totalProducts}` },
       { label: "Total Orders", value: `${totals[0].totalOrders}` },
     ];
-    res
-      .status(200)
-      .json({
-        stats: formattedStats,
-        stateWise:stateWiseAggregate,
-        uniqueCategories:uniqueCategories,
-        uniqueYears:uniqueYears,
-        Top_Product: topSellingProduct[0]._id,
-        Top_Costumer: topCustomer[0]._id,
-      });
+    const Top_Costumer = [
+      { label: "Top Costumer", value: `${topCustomer[0]._id}` },
+    ];
+    const Top_Product = [
+      { label: "Top Product", value: `${topSellingProduct[0]._id}` },
+    ];
+    res.status(200).json({
+      stats: formattedStats,
+      stateWise: stateWiseAggregate,
+      uniqueCategories: uniqueCategories,
+      uniqueYears: uniqueYears,
+      Top_Product: Top_Product,
+      Top_Costumer: Top_Costumer,
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Something went wrong" });
@@ -203,7 +207,6 @@ const lineChart = async (req, res) => {
   }
 };
 
-
 const categoryWise = async (req, res) => {
   try {
     const selectedCategory = req.query.category;
@@ -221,22 +224,18 @@ const categoryWise = async (req, res) => {
       },
     ]);
 
-    // If no data found, return 404
     if (salesData.length === 0) {
       return res
         .status(404)
         .json({ message: "No data found for the selected category" });
     }
 
-    // Prepare xAxisBarData and yAxisBarData
-    const xAxisBarData = salesData.map((entry) => entry._id);
-    const yAxisBarData = [salesData.map((entry) => entry.totalSales)];
+    const xAxisData = salesData.map((entry) => entry._id);
+    const yAxisData = [salesData.map((entry) => entry.totalSales)];
 
-    // Prepare barDataLabels
-    const barDataLabels = ["Sales"];
+    const dataLabels = ["Sales"];
 
-    // Return the formatted data
-    res.json({ xAxisBarData, yAxisBarData, barDataLabels });
+    res.json({ xAxisData, yAxisData, dataLabels });
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "internal server error" });
@@ -244,61 +243,85 @@ const categoryWise = async (req, res) => {
 };
 
 const yearWise = async (req, res) => {
-  const selectedYear = parseInt(req.query.year); // Convert year to integer
+  const selectedYear = req.query.year;
 
   try {
-    // Aggregate the total sales for each month within the selected year
-    const salesData = await orderDetailSchema.aggregate([
-      {
-        $match: {
-          $expr: { $eq: [{ $year: { $toDate: "$order_date" } }, selectedYear] },
+    let xAxisData = [];
+    let yAxisData = [];
+    let dataLabels = ["Sales"];
+    if (selectedYear == "Yearly") {
+      const salesData = await orderDetailSchema.aggregate([
+        {
+          $group: {
+            _id: { $year: { $toDate: "$order_date" } },
+            totalAmount: { $sum: "$amount" },
+          },
         },
-      },
-      {
-        $group: {
-          _id: { $month: { $toDate: "$order_date" } },
-          totalSales: { $sum: "$amount" },
+        {
+          $sort: { _id: 1 },
         },
-      },
-      {
-        $sort: { _id: 1 }, // Sort by month ascending
-      },
-    ]);
+      ]);
 
-    // If no data found, return 404
-    if (salesData.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No data found for the selected year" });
+      if (salesData.length === 0) {
+        return res.status(404).json({ message: "No data found" });
+      }
+
+      xAxisData = salesData.map((entry) => entry._id);
+      yAxisData.push(salesData.map((entry) => entry.totalAmount));
+    } else {
+      const salesData = await orderDetailSchema.aggregate([
+        {
+          $match: {
+            $expr: {
+              $eq: [
+                { $year: { $toDate: "$order_date" } },
+                parseInt(selectedYear),
+              ],
+            },
+          },
+        },
+        {
+          $group: {
+            _id: { $month: { $toDate: "$order_date" } },
+            totalSales: { $sum: "$amount" },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ]);
+
+      if (salesData.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No data found for the selected year" });
+      }
+
+      xAxisData = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      const temp = new Array(12).fill(0);
+      salesData.forEach((entry) => {
+        temp[entry._id - 1] = entry.totalSales;
+      });
+      yAxisData.push(temp);
+
+      console.log(salesData);
     }
 
-    // Prepare xAxisData and yAxisData
-    const xAxisData = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    const yAxisData = [new Array(12).fill(0)]; // Initialize array for sales data for each month
-    salesData.forEach((entry) => {
-      yAxisData[0][entry._id - 1] = entry.totalSales; // Map sales data to corresponding month index
-    });
-
-    // Prepare dataLabels
-    const dataLabels = ["Product A"];
-
-    // Return the formatted data
     res.json({ xAxisData, yAxisData, dataLabels });
   } catch (error) {
-    // Handle errors
     res.status(500).json({ message: "Internal server error" });
   }
 };
