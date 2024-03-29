@@ -189,7 +189,7 @@ By leveraging WebSocket for real-time updates, our e-commerce sales dashboard pr
   "cost_price": 12000,
 }
 ```
-##Test Coverage Chart Image
+## Test Coverage Chart Image
 
 ![image](https://github.com/garvit1166/tailboost-be/assets/92694655/8314bf31-b1cb-4b0a-80f6-41d91ed90852)
 
