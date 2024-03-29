@@ -140,7 +140,7 @@ By leveraging WebSocket for real-time updates, our e-commerce sales dashboard pr
   "email": "john@example.com",
   "password": "john@123"
 }
-
+```
 ### POST /signup
 
 **Description**: Signup the user.
@@ -148,11 +148,12 @@ By leveraging WebSocket for real-time updates, our e-commerce sales dashboard pr
 **Request Body**:
 ```json
 {
-  "name": "John Doe
+  "name": "John Doe",
   "email": "john@example.com",
   "password": "john@123"
 }
 
+```
 ### POST /order/addOrder
 
 **Description**: Adding the orderDetails.
@@ -172,7 +173,7 @@ By leveraging WebSocket for real-time updates, our e-commerce sales dashboard pr
   "state": "Uttar Pradesh",
   "city": "Mathura"
 }
-
+```
 ### POST /product/addProduct
 
 **Description**: Adding the product to the product Collection.
@@ -187,5 +188,5 @@ By leveraging WebSocket for real-time updates, our e-commerce sales dashboard pr
   "sub_category": "Mobile",
   "cost_price": 12000,
 }
-
+```
 
