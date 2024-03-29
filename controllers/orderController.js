@@ -1,16 +1,23 @@
-const orderDetailSchema = require('../models/orderDetail');
-const wss = require('../index.js');
+const orderDetailSchema= require('../models/orderDetail');
+const WebSocket = require('ws');
+const { wss } = require('../WebSocket');
 
 let refreshTimeout;
 
 const sendRefreshMessage = () => {
-  console.log('hi');
-  wss.clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify({ message: 'refresh' }));
-    }
-  });
+  console.log(wss);
+  wss &&
+    wss.clients &&
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ message: 'refresh' }));
+      }
+    });
 };
+
+
+
+
 
 const debounceRefreshMessage = () => {
   clearTimeout(refreshTimeout);
@@ -113,7 +120,7 @@ const getData = async (req, res) => {
         $sort: { totalAmountSpent: -1 },
       },
       {
-        $limit:10
+        $limit:7
       }
     ]);
     console.log('stateWiseAggregate ', stateWiseAggregate);

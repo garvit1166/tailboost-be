@@ -1,38 +1,30 @@
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
-const WebSocket = require('ws');
-const http = require('http');
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const { server, wss, app } = require('./WebSocket');
 
-const userRouter = require("./routes/userRoutes");
-const productRouter = require("./routes/productRoutes");
-const orderRouter = require("./routes/orderRoutes");
-
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const userRouter = require('./routes/userRoutes');
+const productRouter = require('./routes/productRoutes');
+const orderRouter = require('./routes/orderRoutes');
 
 const port = 3001;
-const cors = require("cors");
+const cors = require('cors');
 app.use(bodyParser.urlencoded({ extended: true }));
-
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/", userRouter);
-app.use("/product", productRouter);
-app.use("/order", orderRouter);
+app.use('/', userRouter);
+app.use('/product', productRouter);
+app.use('/order', orderRouter);
 
-app.get("/", (req, res) => {
-  res.send("hello");
+app.get('/', (req, res) => {
+  res.send('hello');
 });
 
 mongoose
-  .connect(
-    process.env.MONGODB_URI
-  )
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     server.listen(port, () => {
       console.log(`Server is listening at http://localhost:${port}`);
@@ -42,16 +34,15 @@ mongoose
     console.log(error);
   });
 
-  wss.on('connection', function connection(ws) {
-    console.log('A new client connected');
-    ws.on('message', function incoming(message) {
-      console.log('Received message from client:', message);
-    });
-  
-    ws.on('close', function close() {
-      console.log('Client disconnected');
-    });
+wss.on('connection', function connection(ws) {
+  console.log('A new client connected');
+  ws.on('message', function incoming(message) {
+    console.log('Received message from client:', message);
   });
 
+  ws.on('close', function close() {
+    console.log('Client disconnected');
+  });
+});
 
-  module.exports={app, wss};
+module.exports = { app };
