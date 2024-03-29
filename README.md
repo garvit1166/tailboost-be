@@ -98,5 +98,94 @@ By leveraging WebSocket for real-time updates, our e-commerce sales dashboard pr
 
 <a id="working-model-ss"></a>
 
-# Working Model Screenshots
+
+## Endpoints
+
+### GET /order
+
+**Description**: Fetches the Total Revenue, Total Profit,Total Number of products, Total Orders and top 7 Statewise data.
+
+### GET /order/categoryWise?category={category}
+
+**Description**: Fetches the sales data on the basis of category.
+
+**Parameters**:
+- `category`: The identifier of the categories in the data.
+ 
+### GET /order/yearWise?year={year}
+
+**Description**: Fetches the sales data on the basis of year.
+
+**Parameters**:
+- `year`: The identifier by which it fetches the data of that year.
+
+### GET /product
+
+**Description**: Fetches the products from the database.
+
+### GET /product/:id
+
+**Description**: Fetches the product on the basis of its unique parameter.
+
+**Parameters**:
+- `id`: The unique identifier of the product.
+
+### POST /
+
+**Description**: LogIn the user.
+
+**Request Body**:
+```json
+{
+  "email": "john@example.com",
+  "password": "john@123"
+}
+
+### POST /signup
+
+**Description**: Signup the user.
+
+**Request Body**:
+```json
+{
+  "name": "John Doe
+  "email": "john@example.com",
+  "password": "john@123"
+}
+
+### POST /order/addOrder
+
+**Description**: Adding the orderDetails.
+
+**Request Body**:
+```json
+{
+  "order_id": "B-26055",
+  "amount": 5729,
+  "profit": 64,
+  "quantity": 14,
+  "category": "Furniture",
+  "sub_category": "Chairs",
+  "payment_mode": "EMI",
+  "order_date": "10/3/2018",
+  "customer_name": "Harivansh",
+  "state": "Uttar Pradesh",
+  "city": "Mathura"
+}
+
+### POST /product/addProduct
+
+**Description**: Adding the product to the product Collection.
+
+**Request Body**:
+```json
+{
+  "name": "RedmiNote5",
+  "price": 15000,
+  "product_id": "B-237",
+  "category": "Electronics",
+  "sub_category": "Mobile",
+  "cost_price": 12000,
+}
+
 
